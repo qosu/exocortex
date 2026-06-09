@@ -22,7 +22,7 @@ from pydantic import BaseModel
 import uvicorn
 import subprocess
 
-from core.exocortex_core import ExocortexPipeline
+from core.exocortex_core import ExocortexPipeline, QuizGenerator, NudgeEngine
 
 # ═══════════════════════════════════════════════════════════════════════
 # CONFIG
@@ -40,6 +40,9 @@ app = FastAPI(title="EXOCORTEX — Symbiotic AI Server", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 pipeline = ExocortexPipeline()
+pipeline.load_state()  # restore mastery from previous sessions
+quiz_engine = QuizGenerator(pipeline)
+nudge_engine = NudgeEngine(pipeline)
 whisper_model = None
 
 def load_whisper():
@@ -110,6 +113,7 @@ async def detect(req: DetectRequest):
     fade_level = pipeline.fading.get_fade_level(
         float(np.mean(pipeline.user_model.state.fading))
     )
+    pipeline.save_state()  # persist mastery changes
 
     return DetectResponse(
         blindspots=[BlindspotResult(
@@ -353,6 +357,51 @@ async def client_html():
     if client_file.exists():
         return HTMLResponse(client_file.read_text())
     return HTMLResponse("<h1>Client not built yet</h1>")
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# PROACTIVE — Quiz, Nudge, Reflection, Status
+# ═══════════════════════════════════════════════════════════════════════
+
+class QuizSubmitRequest(BaseModel):
+    quiz_id: str
+    domain_idx: int
+    score: float
+
+@app.get("/status")
+async def status():
+    return {
+        "status": "ok",
+        "asr_enabled": ASR_ENABLED,
+        "cognitive": pipeline.get_status(),
+    }
+
+@app.get("/quiz")
+async def get_quiz(n: int = 3):
+    questions = quiz_engine.generate_quiz(n)
+    return {"quiz": questions, "generated_at": time.time()}
+
+@app.post("/quiz/submit")
+async def submit_quiz(req: QuizSubmitRequest):
+    quiz_engine.submit_answer(req.quiz_id, req.domain_idx, req.score)
+    pipeline.save_state()
+    return {
+        "accepted": True,
+        "new_mastery": round(float(pipeline.user_model.state.mastery[req.domain_idx]), 3),
+        "status": pipeline.get_status(),
+    }
+
+@app.get("/nudge")
+async def get_nudge():
+    nudge = nudge_engine.get_nudge()
+    if nudge:
+        return {"nudge": nudge, "has_nudge": True}
+    return {"has_nudge": False, "next_available_in": round(nudge_engine.nudge_interval - (time.time() - nudge_engine.last_nudge_time), 0)}
+
+@app.get("/reflect")
+async def get_reflection():
+    return nudge_engine.daily_reflection()
+
 
 # ═══════════════════════════════════════════════════════════════════════
 # MAIN

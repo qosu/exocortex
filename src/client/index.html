@@ -12,711 +12,413 @@
 <link rel="manifest" href="/manifest.json">
 <style>
   :root {
-    --bg: #06060f;
-    --surface: #0e0e1e;
-    --surface2: #16162a;
-    --border: #1e1e3a;
-    --text: #e4e4f0;
-    --muted: #6a6a8a;
-    --accent: #7c5ce7;
-    --accent-glow: #a78bfa;
-    --success: #06d6a0;
-    --warn: #ffd166;
-    --danger: #ef476f;
-    --radius: 18px;
+    --bg: #06060f; --surface: #0e0e1e; --surface2: #16162a; --border: #1e1e3a;
+    --text: #e4e4f0; --muted: #6a6a8a; --accent: #7c5ce7; --accent-glow: #a78bfa;
+    --success: #06d6a0; --warn: #ffd166; --danger: #ef476f; --radius: 18px;
     --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100dvh; min-height: -webkit-fill-available;
-    display: flex;
-    flex-direction: column;
-    overflow-x: hidden;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
-    -webkit-user-select: none;
-    position: relative;
+    font-family: var(--font); background: var(--bg); color: var(--text);
+    min-height: 100dvh; display: flex; flex-direction: column; overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent; user-select: none; position: relative;
   }
-
-  /* ── Cosmic background ── */
   body::before {
-    content: '';
-    position: fixed; inset: 0;
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
     background: radial-gradient(ellipse 80% 60% at 50% 30%, rgba(124,92,231,0.06) 0%, transparent 70%),
                 radial-gradient(ellipse 40% 50% at 80% 80%, rgba(6,214,160,0.04) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
   }
-
-  /* ── Header ── */
-  header {
-    padding: 16px 20px 0;
-    text-align: center;
-    position: relative;
-    z-index: 2;
-  }
-  header h1 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    letter-spacing: -0.5px;
+  header { padding: 16px 20px 0; text-align: center; z-index: 2; }
+  header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px;
     background: linear-gradient(135deg, var(--accent-glow) 0%, #c4b5fd 40%, var(--success) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  header .tagline {
-    font-size: 0.72rem;
-    color: var(--muted);
-    margin-top: 2px;
-    letter-spacing: 0.5px;
-  }
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  header .tagline { font-size: 0.72rem; color: var(--muted); margin-top: 2px; letter-spacing: 0.5px; }
 
-  /* ── Mode selector ── */
-  #mode-bar {
-    display: flex;
-    gap: 6px;
-    justify-content: center;
-    padding: 12px 20px 8px;
-    z-index: 2;
-  }
-  .mode-chip {
-    font-size: 0.68rem;
-    padding: 6px 14px;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.25s;
-    font-family: var(--font);
-  }
-  .mode-chip.active {
-    border-color: var(--accent);
-    color: var(--accent-glow);
-    background: rgba(124,92,231,0.12);
-  }
+  /* ── Tab Nav ── */
+  #tab-nav { display: flex; justify-content: center; gap: 4px; padding: 12px 16px 4px; z-index: 2; }
+  .tab-btn { font-size: 0.7rem; padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); cursor: pointer; transition: all 0.25s; font-family: var(--font); font-weight: 500; }
+  .tab-btn.active { border-color: var(--accent); color: var(--accent-glow); background: rgba(124,92,231,0.12); }
+  .tab-panel { display: none; flex-direction: column; flex: 1; padding: 0 16px; z-index: 2; overflow-y: auto; }
+  .tab-panel.active { display: flex; }
 
   /* ── Status line ── */
-  #status-line {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 4px 20px 12px;
-    font-size: 0.72rem;
-    color: var(--muted);
-    z-index: 2;
-  }
-  #status-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--muted);
-    transition: all 0.3s;
-    flex-shrink: 0;
-  }
+  #status-line { display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 4px 20px 8px; font-size: 0.72rem; color: var(--muted); z-index: 2; }
+  #status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); transition: all 0.3s; flex-shrink: 0; }
   #status-dot.connected { background: var(--success); box-shadow: 0 0 6px var(--success); }
   #status-dot.listening { background: var(--accent-glow); animation: pulse-dot 1.2s infinite; }
   #status-dot.processing { background: var(--warn); animation: pulse-dot 0.4s infinite; }
   @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
-  /* ── Main content ── */
-  #main-area {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 0 16px;
-    z-index: 2;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
+  /* ── Conversation Tab ── */
+  #conv-tab { display: flex; flex-direction: column; }
+  #mode-bar { display: flex; gap: 6px; justify-content: center; padding: 0 0 10px; z-index: 2; }
+  .mode-chip { font-size: 0.68rem; padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); cursor: pointer; transition: all 0.25s; font-family: var(--font); }
+  .mode-chip.active { border-color: var(--accent); color: var(--accent-glow); background: rgba(124,92,231,0.12); }
 
-  /* ── Transcript log ── */
-  #transcript-log {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-height: 60px;
-    max-height: 35vh;
-  }
-  .log-entry {
-    font-size: 0.78rem;
-    padding: 6px 10px;
-    border-radius: 10px;
-    background: var(--surface);
-    color: var(--muted);
-    line-height: 1.4;
-    animation: fadeIn 0.3s;
-  }
-  .log-entry.you { align-self: flex-end; background: var(--surface2); color: var(--text); }
-  .log-entry.blindspot { border-left: 2px solid var(--warn); }
-  @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: translateY(0); } }
-
-  /* ── Prompt card ── */
-  #prompt-container {
-    padding: 10px 0;
-    display: flex;
-    justify-content: center;
-    min-height: 100px;
-  }
-  #prompt-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 24px 20px;
-    width: 100%;
-    max-width: 380px;
-    text-align: center;
-    transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
-    opacity: 0.5;
-    transform: scale(0.97);
-  }
-  #prompt-card.active {
-    opacity: 1;
-    transform: scale(1);
-    border-color: var(--accent);
-    box-shadow: 0 0 50px rgba(124,92,231,0.25), 0 0 100px rgba(124,92,231,0.08);
-  }
-  #prompt-card .label {
-    font-size: 0.62rem;
-    text-transform: uppercase;
-    letter-spacing: 2.5px;
-    color: var(--accent-glow);
-    margin-bottom: 14px;
-    font-weight: 600;
-  }
-  #prompt-card .question {
-    font-size: 1.15rem;
-    font-weight: 500;
-    line-height: 1.55;
-    color: var(--text);
-    letter-spacing: -0.2px;
-  }
-  #prompt-card .question.empty {
-    color: var(--muted);
-    font-style: italic;
-    font-size: 0.9rem;
-    font-weight: 400;
-  }
-  #prompt-card .sub {
-    font-size: 0.68rem;
-    color: var(--muted);
-    margin-top: 14px;
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  #prompt-card .sub span {
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: var(--surface2);
-  }
-
-  /* ── Blindspot radar ── */
-  #radar {
-    display: flex;
-    gap: 5px;
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: 6px 0 12px;
-    min-height: 28px;
-  }
-  .bs-badge {
-    font-size: 0.62rem;
-    padding: 3px 9px;
-    border-radius: 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    transition: all 0.4s;
-  }
-  .bs-badge.hit {
-    border-color: var(--warn);
-    color: var(--warn);
-    background: rgba(255,209,102,0.1);
-    animation: badgePop 0.4s cubic-bezier(0.34,1.56,0.64,1);
-  }
-  @keyframes badgePop { from { transform:scale(0.8); } to { transform:scale(1); } }
-
-  /* ── Controls ── */
-  #controls {
-    padding: 8px 0 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-    z-index: 2;
-  }
-  #mic-btn {
-    width: 68px; height: 68px;
-    border-radius: 50%;
-    border: 2px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
-    font-size: 1.8rem;
-    cursor: pointer;
-    transition: all 0.3s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-  }
-  #mic-btn::after {
-    content: '';
-    position: absolute; inset: -6px;
-    border-radius: 50%;
-    border: 1px solid transparent;
-    transition: all 0.3s;
-  }
-  #mic-btn.recording {
-    border-color: var(--danger);
-    background: rgba(239,71,111,0.12);
-  }
-  #mic-btn.recording::after {
-    border-color: rgba(239,71,111,0.3);
-    animation: ring-pulse 2s infinite;
-  }
-  @keyframes ring-pulse {
-    0%,100% { transform: scale(1); opacity: 0.6; }
-    50% { transform: scale(1.18); opacity: 0; }
-  }
-
-  #mic-btn.continuous-active {
-    border-color: var(--accent);
-    background: rgba(124,92,231,0.12);
-  }
-  #mic-btn.continuous-active::after {
-    border-color: rgba(124,92,231,0.3);
-    animation: ring-pulse 3s infinite;
-  }
-
-  /* ── Waveform ── */
-  #waveform {
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 2px;
-    height: 28px;
-    padding: 0 0 6px;
-  }
-  #waveform .bar {
-    width: 3px;
-    background: var(--muted);
-    border-radius: 2px;
-    transition: height 0.08s ease-out;
-  }
+  #waveform { display: flex; align-items: flex-end; justify-content: center; gap: 2px; height: 28px; padding: 0 0 6px; }
+  #waveform .bar { width: 3px; background: var(--muted); border-radius: 2px; transition: height 0.08s ease-out; }
   #waveform.active .bar { background: var(--accent-glow); }
 
-  /* ── Text input ── */
-  #text-bar {
-    padding: 0 16px 12px;
-    display: flex;
-    gap: 8px;
-    z-index: 2;
-  }
-  #text-input {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 22px;
-    padding: 10px 16px;
-    color: var(--text);
-    font-size: 0.85rem;
-    font-family: var(--font);
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  #text-input:focus { border-color: var(--accent); }
-  #send-btn {
-    background: var(--accent);
-    border: none;
-    color: white;
-    border-radius: 50%;
-    width: 40px; height: 40px;
-    font-size: 1rem;
-    cursor: pointer;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s;
-  }
-  #send-btn:active { transform: scale(0.9); }
+  #transcript-log { flex: 1; overflow-y: auto; padding: 8px 4px; display: flex; flex-direction: column; gap: 6px; min-height: 40px; max-height: 28vh; }
+  .log-entry { font-size: 0.78rem; padding: 6px 10px; border-radius: 10px; background: var(--surface); color: var(--muted); line-height: 1.4; animation: fadeIn 0.3s; }
+  .log-entry.you { align-self: flex-end; background: var(--surface2); color: var(--text); }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: translateY(0); } }
 
-  /* ── Empty state ── */
+  #prompt-container { padding: 10px 0; display: flex; justify-content: center; min-height: 80px; }
+  #prompt-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px 18px; width: 100%; max-width: 380px; text-align: center;
+    transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1); opacity: 0.5; transform: scale(0.97); }
+  #prompt-card.active { opacity: 1; transform: scale(1); border-color: var(--accent);
+    box-shadow: 0 0 50px rgba(124,92,231,0.25), 0 0 100px rgba(124,92,231,0.08); }
+  #prompt-card .label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 2.5px; color: var(--accent-glow); margin-bottom: 12px; font-weight: 600; }
+  #prompt-card .question { font-size: 1.1rem; font-weight: 500; line-height: 1.55; color: var(--text); letter-spacing: -0.2px; }
+  #prompt-card .question.empty { color: var(--muted); font-style: italic; font-size: 0.85rem; font-weight: 400; }
+  #prompt-card .sub { font-size: 0.68rem; color: var(--muted); margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  #prompt-card .sub span { padding: 2px 8px; border-radius: 10px; background: var(--surface2); }
+  #radar { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; padding: 4px 0 10px; min-height: 24px; }
+  .bs-badge { font-size: 0.62rem; padding: 3px 9px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--muted); transition: all 0.4s; }
+  .bs-badge.hit { border-color: var(--warn); color: var(--warn); background: rgba(255,209,102,0.1); animation: badgePop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+  @keyframes badgePop { from { transform:scale(0.8); } to { transform:scale(1); } }
+
+  #controls { padding: 6px 0 10px; display: flex; justify-content: center; gap: 16px; z-index: 2; }
+  #mic-btn { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface); color: var(--text); font-size: 1.7rem; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; position: relative; }
+  #mic-btn::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 1px solid transparent; transition: all 0.3s; }
+  #mic-btn.recording { border-color: var(--danger); background: rgba(239,71,111,0.12); }
+  #mic-btn.recording::after { border-color: rgba(239,71,111,0.3); animation: ring-pulse 2s infinite; }
+  #mic-btn.continuous-active { border-color: var(--accent); background: rgba(124,92,231,0.12); }
+  #mic-btn.continuous-active::after { border-color: rgba(124,92,231,0.3); animation: ring-pulse 3s infinite; }
+  @keyframes ring-pulse { 0%,100%{transform:scale(1);opacity:0.6} 50%{transform:scale(1.18);opacity:0} }
+
+  #text-bar { padding: 0 16px 14px; display: flex; gap: 8px; z-index: 2; }
+  #text-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 10px 16px; color: var(--text); font-size: 0.85rem; font-family: var(--font); outline: none; }
+  #text-input:focus { border-color: var(--accent); }
+  #send-btn { background: var(--accent); border: none; color: white; border-radius: 50%; width: 40px; height: 40px; font-size: 1rem; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+  #send-btn:active { transform: scale(0.9); }
   .hidden { display: none !important; }
+
+  /* ── Quiz Tab ── */
+  #quiz-tab { padding-top: 4px; }
+  .quiz-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 18px; margin-bottom: 12px; animation: fadeIn 0.4s; }
+  .quiz-card .q-domain { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent-glow); margin-bottom: 8px; }
+  .quiz-card .q-text { font-size: 1rem; line-height: 1.5; color: var(--text); margin-bottom: 12px; }
+  .quiz-card .q-hint { font-size: 0.65rem; color: var(--muted); margin-bottom: 14px; }
+  .quiz-card .q-score { display: flex; gap: 6px; flex-wrap: wrap; }
+  .q-score button { flex: 1; min-width: 48px; padding: 8px 4px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); font-size: 0.7rem; cursor: pointer; transition: all 0.2s; font-family: var(--font); }
+  .q-score button:active { transform: scale(0.95); background: var(--accent); color: white; border-color: var(--accent); }
+  .quiz-card.scored { opacity: 0.5; pointer-events: none; }
+  .quiz-card.scored .q-result { color: var(--success); font-size: 0.72rem; font-weight: 600; }
+  #quiz-loading { text-align: center; color: var(--muted); padding: 40px 0; }
+  #quiz-actions { display: flex; gap: 10px; padding: 10px 0 20px; }
+  #quiz-actions button { flex: 1; padding: 10px; border-radius: 22px; border: 1px solid var(--accent); background: transparent; color: var(--accent-glow); font-size: 0.8rem; cursor: pointer; font-family: var(--font); transition: all 0.2s; }
+  #quiz-actions button:active { background: var(--accent); color: white; }
+
+  /* ── Reflection Tab ── */
+  #reflect-tab { padding-top: 8px; }
+  .mastery-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .mastery-row .m-label { font-size: 0.72rem; width: 140px; flex-shrink: 0; color: var(--text); text-align: right; }
+  .mastery-row .m-bar-outer { flex: 1; height: 10px; background: var(--surface2); border-radius: 5px; overflow: hidden; }
+  .mastery-row .m-bar-inner { height: 100%; border-radius: 5px; transition: width 0.6s ease, background 0.4s; }
+  .reflect-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 12px; text-align: center; }
+  .reflect-card .r-stat { font-size: 2rem; font-weight: 700; color: var(--accent-glow); }
+  .reflect-card .r-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 2px; }
+  .reflect-message { font-size: 0.85rem; line-height: 1.5; color: var(--text); padding: 16px; text-align: center; }
+  :root { --safe-bottom: env(safe-area-inset-bottom, 0px); }
 </style>
 </head>
 <body>
 
 <header>
   <h1>EXOCORTEX</h1>
-  <div class="tagline">Bán cầu não thứ ba</div>
+  <div class="tagline">Bán cầu não thứ ba · Huấn luyện viên nhận thức</div>
 </header>
 
-<div id="mode-bar">
-  <button class="mode-chip active" data-mode="push">🎙 Nhấn-để-nói</button>
-  <button class="mode-chip" data-mode="continuous">🔄 Liên tục</button>
-</div>
+<nav id="tab-nav">
+  <button class="tab-btn active" data-tab="conv">🎙 Đàm thoại</button>
+  <button class="tab-btn" data-tab="quiz">📝 Quiz</button>
+  <button class="tab-btn" data-tab="reflect">📊 Phản tư</button>
+</nav>
 
 <div id="status-line">
   <div id="status-dot"></div>
   <span id="status-text">Đang khởi động...</span>
 </div>
 
-<div id="waveform"><span style="font-size:0.6rem;color:var(--muted)">...</span></div>
-
-<div id="main-area">
+<!-- ── Conversation Tab ── -->
+<div class="tab-panel active" id="conv-tab">
+  <div id="mode-bar">
+    <button class="mode-chip active" data-mode="push">🎙 Nhấn-để-nói</button>
+    <button class="mode-chip" data-mode="continuous">🔄 Liên tục</button>
+  </div>
+  <div id="waveform"><span style="font-size:0.6rem;color:var(--muted)">...</span></div>
   <div id="transcript-log"></div>
   <div id="prompt-container">
     <div id="prompt-card">
       <div class="label">TRUY VẤN SOCRATIC</div>
-      <div class="question empty">
-        Đeo tai nghe, để điện thoại gần bạn.<br>
-        Nhấn 🎤 khi hội thoại — AI sẽ hỏi bạn câu hỏi phản biện.
-      </div>
+      <div class="question empty">Đeo tai nghe, để điện thoại gần bạn.<br>Nhấn 🎤 khi hội thoại — AI sẽ hỏi bạn.</div>
       <div class="sub"></div>
     </div>
   </div>
   <div id="radar"></div>
+  <div id="controls"><button id="mic-btn" title="Bắt đầu / Dừng">🎤</button></div>
+  <div id="text-bar">
+    <input type="text" id="text-input" placeholder="Hoặc gõ suy nghĩ của bạn..." autocomplete="off" enterkeyhint="send">
+    <button id="send-btn">▶</button>
+  </div>
 </div>
 
-<div id="controls">
-  <button id="mic-btn" title="Bắt đầu / Dừng">🎤</button>
+<!-- ── Quiz Tab ── -->
+<div class="tab-panel" id="quiz-tab">
+  <div id="quiz-loading">🧠 Đang tạo bài quiz từ blindspot yếu nhất của bạn...</div>
+  <div id="quiz-cards"></div>
+  <div id="quiz-actions" class="hidden">
+    <button id="quiz-retry">🔄 Quiz mới</button>
+  </div>
 </div>
 
-<div id="text-bar">
-  <input type="text" id="text-input" placeholder="Hoặc gõ suy nghĩ của bạn..." autocomplete="off" enterkeyhint="send">
-  <button id="send-btn">▶</button>
+<!-- ── Reflection Tab ── -->
+<div class="tab-panel" id="reflect-tab">
+  <div id="reflect-content" style="text-align:center;color:var(--muted);padding:20px;">Đang tải...</div>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════════
-// EXOCORTEX — Symbiotic AI Wearable
-// The Third Hemisphere. Listens. Detects blindspots. Asks Socratic questions.
-// Never answers. Only sharpens your thinking.
-// ═══════════════════════════════════════════════════════════════════════
-
 const HOST = window.location.hostname;
 const WS_URL = `wss://${HOST}/exocortex/ws`;
-const REST_URL = `/exocortex/detect`;
+const BASE = '/exocortex';
 
-// ── State ──
-let ws = null;
-let mode = 'push';          // 'push' | 'continuous'
-let isRecording = false;
-let mediaRecorder = null;
-let audioCtx = null;
-let analyser = null;
-let animationId = null;
-let transcript = [];
-let currentBlindspots = [];
-
-// ── DOM ──
+let ws = null, mode = 'push', isRecording = false, mediaRecorder = null, audioCtx = null, analyser = null, animationId = null;
 const $ = (s) => document.querySelector(s);
-const statusDot = $('#status-dot');
-const statusText = $('#status-text');
-const promptCard = $('#prompt-card');
-const questionEl = $('#prompt-card .question');
-const subEl = $('#prompt-card .sub');
-const radarEl = $('#radar');
-const micBtn = $('#mic-btn');
-const textInput = $('#text-input');
-const sendBtn = $('#send-btn');
-const transcriptLog = $('#transcript-log');
+const $$ = (s) => document.querySelectorAll(s);
+
+// ── Waveform bars ──
 const waveformEl = $('#waveform');
-const modeChips = document.querySelectorAll('.mode-chip');
+for (let i = 0; i < 24; i++) { const b = document.createElement('div'); b.className='bar'; b.style.height='4px'; waveformEl.appendChild(b); }
 
-// ── Build waveform bars ──
-for (let i = 0; i < 24; i++) {
-  const bar = document.createElement('div');
-  bar.className = 'bar';
-  bar.style.height = '4px';
-  waveformEl.appendChild(bar);
-}
-
-// ── Audio context for waveform visualization ──
 function initAudioContext(stream) {
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 64;
-  const source = audioCtx.createMediaStreamSource(stream);
-  source.connect(analyser);
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser(); analyser.fftSize = 64;
+  audioCtx.createMediaStreamSource(stream).connect(analyser);
 }
-
 function animateWaveform() {
   if (!analyser) return;
-  const bars = waveformEl.querySelectorAll('.bar');
-  const data = new Uint8Array(analyser.frequencyBinCount);
+  const bars = waveformEl.querySelectorAll('.bar'), data = new Uint8Array(analyser.frequencyBinCount);
   analyser.getByteFrequencyData(data);
-  for (let i = 0; i < bars.length; i++) {
-    const val = data[Math.floor(i * data.length / bars.length)] / 255;
-    bars[i].style.height = (2 + val * 24) + 'px';
-  }
-  if (isRecording) {
-    animationId = requestAnimationFrame(animateWaveform);
-  }
+  for (let i = 0; i < bars.length; i++) bars[i].style.height = (2 + data[Math.floor(i*data.length/bars.length)]/255 * 24) + 'px';
+  if (isRecording) animationId = requestAnimationFrame(animateWaveform);
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// WebSocket
-// ═══════════════════════════════════════════════════════════════════════
-
+// ── WebSocket ──
 function connectWS() {
-  if (ws && ws.readyState === WebSocket.OPEN) return;
-  if (ws && ws.readyState === WebSocket.CONNECTING) return;
-
+  if (ws && ws.readyState <= WebSocket.OPEN) return;
   ws = new WebSocket(WS_URL);
-
-  ws.onopen = () => {
-    setStatus('connected', 'Sẵn sàng');
-  };
-
-  ws.onmessage = (ev) => {
-    try { handleMessage(JSON.parse(ev.data)); }
-    catch { /* ignore malformed */ }
-  };
-
-  ws.onclose = () => {
-    setStatus('', 'Mất kết nối — tự reconnect...');
-    setTimeout(connectWS, 1500);
-  };
-
+  ws.onopen = () => setStatus('connected','Sẵn sàng');
+  ws.onmessage = (ev) => { try { handleMessage(JSON.parse(ev.data)); } catch{} };
+  ws.onclose = () => { setStatus('','Mất kết nối...'); setTimeout(connectWS,1500); };
   ws.onerror = () => {};
 }
 
 function handleMessage(msg) {
-  switch (msg.type) {
-    case 'prompt':
-      showPrompt(msg);
-      speakPrompt(msg.text);
-      break;
-    case 'partial_transcript':
-      addTranscript('you', msg.text);
-      setStatus('listening', 'Đang nghe...');
-      break;
-    case 'silence':
-      if (isRecording) setStatus('listening', 'Yên lặng...');
-      break;
-  }
+  if (msg.type === 'prompt') { showPrompt(msg); speakPrompt(msg.text); }
+  else if (msg.type === 'partial_transcript') { addTranscript('you',msg.text); setStatus('listening','Đang nghe...'); }
+  else if (msg.type === 'silence' && isRecording) setStatus('listening','Yên lặng...');
 }
 
-function setStatus(cls, text) {
-  statusDot.className = cls;
-  statusText.textContent = text;
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// Prompt display
-// ═══════════════════════════════════════════════════════════════════════
+function setStatus(cls,text) { $('#status-dot').className=cls; $('#status-text').textContent=text; }
 
 function showPrompt(msg) {
-  promptCard.classList.add('active');
-  questionEl.textContent = msg.text;
-  questionEl.className = 'question';
-  subEl.innerHTML = msg.blindspots
-    ? msg.blindspots.slice(0,2).map(b => `<span>${b.type}</span>`).join('')
-    : '';
-  setStatus('connected', 'Câu hỏi mới');
-
-  // Radar badges
+  const card = $('#prompt-card'); card.classList.add('active');
+  $('#prompt-card .question').textContent = msg.text; $('#prompt-card .question').className = 'question';
+  $('#prompt-card .sub').innerHTML = msg.blindspots ? msg.blindspots.slice(0,2).map(b=>`<span>${b.type}</span>`).join('') : '';
+  setStatus('connected','Câu hỏi mới');
   if (msg.blindspots) {
-    currentBlindspots = msg.blindspots;
-    radarEl.innerHTML = msg.blindspots.map(b =>
-      `<span class="bs-badge hit">${b.type}</span>`
-    ).join('');
-    setTimeout(() => {
-      radarEl.querySelectorAll('.bs-badge').forEach(b => b.classList.remove('hit'));
-    }, 6000);
+    $('#radar').innerHTML = msg.blindspots.map(b=>`<span class="bs-badge hit">${b.type}</span>`).join('');
+    setTimeout(()=>$$('.bs-badge').forEach(b=>b.classList.remove('hit')),6000);
   }
-
-  // Haptic feedback
-  if (navigator.vibrate) navigator.vibrate([30, 80, 30]);
-
-  setTimeout(() => promptCard.classList.remove('active'), 10000);
+  if (navigator.vibrate) navigator.vibrate([30,80,30]);
+  setTimeout(()=>card.classList.remove('active'),10000);
 }
 
 function speakPrompt(text) {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'vi-VN';
-  u.rate = 0.95;
-  u.pitch = 1.05;
+  const u = new SpeechSynthesisUtterance(text); u.lang='vi-VN'; u.rate=0.95; u.pitch=1.05;
   window.speechSynthesis.speak(u);
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// Transcript
-// ═══════════════════════════════════════════════════════════════════════
-
-function addTranscript(cls, text) {
-  transcript.push({ cls, text });
-  const div = document.createElement('div');
-  div.className = `log-entry ${cls}`;
-  div.textContent = text;
-  transcriptLog.appendChild(div);
-  transcriptLog.scrollTop = transcriptLog.scrollHeight;
-  if (transcriptLog.children.length > 30) {
-    transcriptLog.firstChild.remove();
-  }
+function addTranscript(cls,text) {
+  const div = document.createElement('div'); div.className=`log-entry ${cls}`; div.textContent=text;
+  $('#transcript-log').appendChild(div);
+  $('#transcript-log').scrollTop = $('#transcript-log').scrollHeight;
+  if ($('#transcript-log').children.length > 30) $('#transcript-log').firstChild.remove();
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// Audio Recording
-// ═══════════════════════════════════════════════════════════════════════
-
+// ── Recording ──
 async function startRecording() {
   if (isRecording) return;
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        sampleRate: 16000,
-        channelCount: 1,
-        echoCancellation: true,
-        noiseSuppression: true,
-      }
-    });
-
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate:16000, channelCount:1, echoCancellation:true, noiseSuppression:true } });
     initAudioContext(stream);
-
-    mediaRecorder = new MediaRecorder(stream, {
-      mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus' : 'audio/webm'
-    });
-
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0 && ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(e.data);
-      }
-    };
-
-    mediaRecorder.start(200);
-    isRecording = true;
-    waveformEl.classList.add('active');
+    mediaRecorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm' });
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size>0 && ws && ws.readyState===WebSocket.OPEN) ws.send(e.data); };
+    mediaRecorder.start(200); isRecording = true; waveformEl.classList.add('active');
     animationId = requestAnimationFrame(animateWaveform);
-
-    if (mode === 'push') {
-      micBtn.textContent = '⏹';
-      micBtn.className = 'recording';
-    } else {
-      micBtn.textContent = '⏸';
-      micBtn.className = 'continuous-active';
-    }
-    setStatus('listening', 'Đang nghe...');
-  } catch (err) {
-    setStatus('', 'Lỗi mic: ' + err.message);
-    alert('Cần quyền microphone. Vào Cài đặt → Chrome → Microphone → Bật.');
-  }
+    const mic = $('#mic-btn');
+    if (mode==='push') { mic.textContent='⏹'; mic.className='recording'; }
+    else { mic.textContent='⏸'; mic.className='continuous-active'; }
+    setStatus('listening','Đang nghe...');
+  } catch(err) { setStatus('','Lỗi mic: '+err.message); alert('Cần quyền microphone. Cài đặt → Chrome → Microphone → Bật.'); }
 }
 
 function stopRecording() {
   if (!isRecording) return;
-
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.stop();
-  }
-  if (mediaRecorder && mediaRecorder.stream) {
-    mediaRecorder.stream.getTracks().forEach(t => t.stop());
-  }
-  if (animationId) {
-    cancelAnimationFrame(animationId);
-    animationId = null;
-  }
-
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'turn_end' }));
-  }
-
-  isRecording = false;
-  micBtn.textContent = '🎤';
-  micBtn.className = '';
-  waveformEl.classList.remove('active');
-  setStatus('processing', 'Đang phân tích...');
-
-  // Reset waveform bars
-  waveformEl.querySelectorAll('.bar').forEach(b => b.style.height = '3px');
+  if (mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop();
+  if (mediaRecorder && mediaRecorder.stream) mediaRecorder.stream.getTracks().forEach(t=>t.stop());
+  if (animationId) { cancelAnimationFrame(animationId); animationId=null; }
+  if (ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({type:'turn_end'}));
+  isRecording=false; const mic=$('#mic-btn'); mic.textContent='🎤'; mic.className='';
+  waveformEl.classList.remove('active'); setStatus('processing','Đang phân tích...');
+  waveformEl.querySelectorAll('.bar').forEach(b=>b.style.height='3px');
 }
 
-function toggleRecording() {
-  if (isRecording) { stopRecording(); }
-  else { startRecording(); }
-}
+$('#mic-btn').addEventListener('click', ()=>{ if(isRecording)stopRecording(); else startRecording(); });
 
-// ═══════════════════════════════════════════════════════════════════════
-// Text input
-// ═══════════════════════════════════════════════════════════════════════
-
+// ── Text ──
 async function sendText() {
-  const text = textInput.value.trim();
-  if (text.length < 8) return;
-  textInput.value = '';
-  addTranscript('you', text);
-  setStatus('processing', 'Đang phân tích...');
-
+  const text = $('#text-input').value.trim(); if (text.length<8) return;
+  $('#text-input').value = ''; addTranscript('you',text); setStatus('processing','Đang phân tích...');
   try {
-    const resp = await fetch(REST_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    });
-    const d = await resp.json();
-    if (d.prompt) {
-      showPrompt({
-        text: d.prompt,
-        complexity: d.prompt_complexity,
-        blindspots: d.blindspots
+    const r = await fetch(`${BASE}/detect`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    const d = await r.json();
+    if (d.prompt) showPrompt({text:d.prompt,complexity:d.prompt_complexity,blindspots:d.blindspots});
+    else { $('#prompt-card .question').textContent='✅ Không phát hiện blindspot.'; $('#prompt-card .question').className='empty'; $('#prompt-card .sub').innerHTML=''; }
+    setStatus('connected','Sẵn sàng');
+  } catch(e) { setStatus('','Lỗi kết nối'); }
+}
+$('#send-btn').addEventListener('click',sendText);
+$('#text-input').addEventListener('keydown',(e)=>{ if(e.key==='Enter')sendText(); });
+
+// ── Mode ──
+$$('.mode-chip').forEach(c=>c.addEventListener('click',()=>{
+  if(isRecording)stopRecording();
+  mode=c.dataset.mode; $$('.mode-chip').forEach(x=>x.classList.remove('active')); c.classList.add('active');
+}));
+
+// ═══════════════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════════════
+$$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
+  $$('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  $$('.tab-panel').forEach(p => p.classList.remove('active'));
+  $(`#${btn.dataset.tab}-tab`).classList.add('active');
+  if (btn.dataset.tab === 'quiz') loadQuiz();
+  if (btn.dataset.tab === 'reflect') loadReflection();
+}));
+
+// ═══════════════════════════════════════════════════════════════════════
+// QUIZ
+// ═══════════════════════════════════════════════════════════════════════
+async function loadQuiz() {
+  const loading = $('#quiz-loading'), cards = $('#quiz-cards'), actions = $('#quiz-actions');
+  loading.classList.remove('hidden'); cards.innerHTML = ''; actions.classList.add('hidden');
+  try {
+    const r = await fetch(`${BASE}/quiz?n=3`);
+    const d = await r.json();
+    loading.classList.add('hidden');
+    d.quiz.forEach((q, i) => {
+      const div = document.createElement('div'); div.className = 'quiz-card'; div.dataset.qid = q.id;
+      div.dataset.domainIdx = q.domain_idx;
+      div.innerHTML = `<div class="q-domain">${q.domain}</div>
+        <div class="q-text">${q.question}</div>
+        <div class="q-hint">💡 Gợi ý: ${q.hint} · Mastery hiện tại: ${Math.round(q.mastery_current*100)}%</div>
+        <div class="q-score">
+          <button data-score="0.0">0%<br>Chưa biết</button>
+          <button data-score="0.33">33%<br>Có ý</button>
+          <button data-score="0.67">67%<br>Khá</button>
+          <button data-score="1.0">100%<br>Thuần thục</button>
+        </div>`;
+      div.querySelectorAll('.q-score button').forEach(btn => {
+        btn.addEventListener('click', () => submitQuiz(q.id, q.domain_idx, parseFloat(btn.dataset.score), div));
       });
-    } else {
-      questionEl.textContent = '✅ Không phát hiện blindspot.';
-      questionEl.className = 'empty';
-      subEl.innerHTML = '';
+      cards.appendChild(div);
+    });
+    actions.classList.remove('hidden');
+  } catch(e) { loading.textContent = 'Lỗi tải quiz. Thử lại.'; }
+}
+
+async function submitQuiz(qid, domainIdx, score, cardEl) {
+  try {
+    const r = await fetch(`${BASE}/quiz/submit`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({quiz_id: qid, domain_idx: domainIdx, score})
+    });
+    const d = await r.json();
+    cardEl.classList.add('scored');
+    const pct = Math.round(score*100);
+    const result = document.createElement('div');
+    result.className = 'q-result';
+    result.textContent = `✅ Đã ghi nhận (${pct}%). Mastery mới: ${Math.round(d.new_mastery*100)}%`;
+    cardEl.appendChild(result);
+  } catch(e) { alert('Lỗi gửi kết quả.'); }
+}
+
+$('#quiz-retry').addEventListener('click', loadQuiz);
+
+// ═══════════════════════════════════════════════════════════════════════
+// REFLECTION
+// ═══════════════════════════════════════════════════════════════════════
+async function loadReflection() {
+  const el = $('#reflect-content');
+  try {
+    const r = await fetch(`${BASE}/reflect`);
+    const d = await r.json();
+    const masteryList = [...d.weakest, ...d.strongest.reverse()].filter((v,i,a)=>a.findIndex(x=>x.domain===v.domain)===i);
+    const allDomains = ['Thiếu biến kiểm soát','Nhân quả ngược','Bỏ qua tỉ lệ nền','Thiên kiến sống sót','Bẫy khung','Khái quát hóa quá mức','Yếu tố thời gian gây nhiễu','Thiên kiến chọn mẫu'];
+    const masteryMap = {};
+    d.weakest.forEach(w=>masteryMap[w.domain]=w.mastery);
+    d.strongest.forEach(w=>masteryMap[w.domain]=w.mastery);
+
+    let html = `<div class="reflect-card"><div class="r-stat">${d.prompts_today}</div><div class="r-label">Truy vấn hôm nay</div></div>`;
+    html += `<div class="reflect-card"><div class="r-stat">${Math.round(d.average_mastery*100)}%</div><div class="r-label">Mastery trung bình</div><div style="font-size:0.65rem;color:var(--muted);margin-top:4px">Fatigue: ${Math.round(d.fatigue*100)}%</div></div>`;
+
+    html += '<div style="padding: 8px 0;"><div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">8 Miền Nhận Thức</div>';
+    allDomains.forEach(name => {
+      const m = masteryMap[name] || 0.3;
+      const pct = Math.round(m*100);
+      const hue = m < 0.4 ? 0 : m < 0.7 ? 40 : 160;
+      html += `<div class="mastery-row"><div class="m-label">${name}</div><div class="m-bar-outer"><div class="m-bar-inner" style="width:${pct}%;background:hsl(${hue},70%,50%)"></div></div><div style="font-size:0.65rem;color:var(--muted);width:36px;text-align:right">${pct}%</div></div>`;
+    });
+    html += '</div>';
+    html += `<div class="reflect-message">${d.message}</div>`;
+    el.innerHTML = html;
+  } catch(e) { el.textContent = 'Lỗi tải dữ liệu.'; }
+}
+
+// ── Periodic nudge check ──
+async function checkNudge() {
+  try {
+    const r = await fetch(`${BASE}/nudge`);
+    const d = await r.json();
+    if (d.has_nudge && document.visibilityState === 'visible') {
+      if (navigator.vibrate) navigator.vibrate([50,100,50]);
+      const n = d.nudge;
+      const div = document.createElement('div');
+      div.style.cssText = 'position:fixed;top:60px;left:16px;right:16px;background:var(--surface);border:1px solid var(--accent);border-radius:14px;padding:14px 18px;z-index:99;font-size:0.82rem;color:var(--text);box-shadow:0 8px 32px rgba(124,92,231,0.3);animation:fadeIn 0.5s;cursor:pointer';
+      div.innerHTML = `<strong style="color:var(--accent-glow)">🔄 Nhắc bài</strong><br>${n.nudge}<br><span style="font-size:0.6rem;color:var(--muted)">Mastery: ${Math.round(n.mastery*100)}% · Chạm để đóng</span>`;
+      div.addEventListener('click', () => div.remove());
+      document.body.appendChild(div);
+      setTimeout(() => { if (div.parentNode) div.remove(); }, 8000);
     }
-    setStatus('connected', 'Sẵn sàng');
-  } catch (e) {
-    setStatus('', 'Lỗi kết nối');
-  }
+  } catch{}
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// Mode switching
-// ═══════════════════════════════════════════════════════════════════════
-
-modeChips.forEach(chip => {
-  chip.addEventListener('click', () => {
-    if (isRecording) stopRecording();
-    mode = chip.dataset.mode;
-    modeChips.forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// Events
-// ═══════════════════════════════════════════════════════════════════════
-
-micBtn.addEventListener('click', toggleRecording);
-sendBtn.addEventListener('click', sendText);
-textInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') sendText();
-});
-
-// Init
+// ── Init ──
 connectWS();
-setInterval(() => {
-  if (!ws || ws.readyState > WebSocket.OPEN) connectWS();
-}, 8000);
-
-// Register service worker
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
-}
+setInterval(() => { if (!ws || ws.readyState > WebSocket.OPEN) connectWS(); }, 8000);
+setInterval(checkNudge, 120000); // check nudge every 2 minutes
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
 </script>
 </body>
 </html>

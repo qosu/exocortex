@@ -14,6 +14,10 @@ from typing import List, Dict, Optional, Tuple
 from enum import Enum, auto
 import numpy as np
 import math
+import json
+import os
+import time
+from pathlib import Path
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -519,18 +523,219 @@ class ExocortexPipeline:
         return prompt
 
     def end_of_day_reflection(self, quiz_results: Dict[int, float]):
-        """
-        Process end-of-day spaced repetition results to update mastery.
-        quiz_results: {domain_idx: score}
-        """
         for domain_idx, score in quiz_results.items():
             self.user_model.update_mastery(domain_idx, score, 0.5)
         self.fading.update(self.user_model)
         self.user_model.state.total_prompts_today = 0
 
+    def save_state(self, path: str = "/var/lib/exocortex/user_state.json"):
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        state = {
+            "mastery": self.user_model.state.mastery.tolist(),
+            "fatigue": self.user_model.state.fatigue,
+            "attention": self.user_model.state.attention,
+            "fading": self.user_model.state.fading.tolist(),
+            "total_prompts_today": self.user_model.state.total_prompts_today,
+            "prompts_in_last_60s": self.user_model.state.prompts_in_last_60s,
+            "last_saved": time.time(),
+            "prompt_count": len(self.user_model.prompt_log),
+        }
+        with open(path, 'w') as f:
+            json.dump(state, f)
+
+    def load_state(self, path: str = "/var/lib/exocortex/user_state.json"):
+        if not os.path.exists(path):
+            return False
+        with open(path) as f:
+            state = json.load(f)
+        self.user_model.state.mastery = np.array(state["mastery"])
+        self.user_model.state.fatigue = state["fatigue"]
+        self.user_model.state.attention = state["attention"]
+        self.user_model.state.fading = np.array(state["fading"])
+        self.user_model.state.total_prompts_today = state["total_prompts_today"]
+        self.user_model.state.prompts_in_last_60s = state["prompts_in_last_60s"]
+        return True
+
+    def get_status(self) -> dict:
+        weakest = int(np.argmin(self.user_model.state.mastery))
+        strongest = int(np.argmax(self.user_model.state.mastery))
+        domain_names = [
+            "Thiếu biến kiểm soát", "Nhân quả ngược", "Bỏ qua tỉ lệ nền",
+            "Thiên kiến sống sót", "Bẫy khung", "Khái quát hóa quá mức",
+            "Yếu tố thời gian gây nhiễu", "Thiên kiến chọn mẫu"
+        ]
+        return {
+            "mastery": {domain_names[i]: round(float(self.user_model.state.mastery[i]), 3) for i in range(8)},
+            "fatigue": round(self.user_model.state.fatigue, 3),
+            "attention": round(self.user_model.state.attention, 3),
+            "fading_levels": [self.fading.get_fade_level(float(self.user_model.state.fading[i])).name for i in range(8)],
+            "weakest_domain": domain_names[weakest],
+            "strongest_domain": domain_names[strongest],
+            "prompts_today": self.user_model.state.total_prompts_today,
+            "budget_per_minute": self.fading.get_prompt_budget(self.user_model),
+        }
+
 
 # ═══════════════════════════════════════════════════════════════════════
-# VII. SELF-TEST SUITE
+# VII. QUIZ GENERATOR — Proactive Cognitive Training
+# ═══════════════════════════════════════════════════════════════════════
+
+QUIZ_TEMPLATES = {
+    BlindspotType.MISSING_VARIABLE: [
+        {"q": "Khi nói '{entity}', có biến nào chưa được kiểm soát không?", "answer_hint": "Biến kiểm soát"},
+        {"q": "Nếu giữ nguyên tất cả biến khác, liệu '{entity}' còn đúng?", "answer_hint": "Ceteris paribus"},
+        {"q": "Làm sao để test '{entity}' trong một thí nghiệm có nhóm kiểm soát?", "answer_hint": "Nhóm kiểm soát"},
+    ],
+    BlindspotType.CAUSAL_INVERSION: [
+        {"q": "Có chắc '{entity}' là nguyên nhân chứ không phải kết quả?", "answer_hint": "Đảo ngược nhân quả"},
+        {"q": "Nếu đảo ngược mũi tên nhân quả ở '{entity}', chuyện gì xảy ra?", "answer_hint": "Mũi tên ngược"},
+        {"q": "Có yếu tố thứ ba nào gây ra cả hai không?", "answer_hint": "Third variable"},
+    ],
+    BlindspotType.BASE_RATE_NEGLECT: [
+        {"q": "Tỉ lệ nền của '{entity}' là bao nhiêu? So với tỉ lệ đó thì sao?", "answer_hint": "Base rate"},
+        {"q": "Nếu không biết gì về '{entity}', xác suất mặc định là bao nhiêu?", "answer_hint": "Prior probability"},
+        {"q": "Bao nhiêu % trường hợp '{entity}' xảy ra một cách tự nhiên?", "answer_hint": "Tần suất nền"},
+    ],
+    BlindspotType.SURVIVORSHIP_BIAS: [
+        {"q": "Những trường hợp '{entity}' thất bại thì sao? Họ đâu rồi?", "answer_hint": "Thất bại vô hình"},
+        {"q": "Bạn đang nhìn vào người sống sót — ai đã biến mất khỏi dữ liệu?", "answer_hint": "Selection bias"},
+        {"q": "Nếu tính cả những người bỏ cuộc, '{entity}' còn đúng không?", "answer_hint": "Attrition"},
+    ],
+    BlindspotType.FRAMING_TRAP: [
+        {"q": "Cùng một câu hỏi về '{entity}' nhưng hỏi ngược lại thì sao?", "answer_hint": "Framing effect"},
+        {"q": "Nếu diễn đạt '{entity}' theo cách khác, quyết định có thay đổi?", "answer_hint": "Reframe"},
+        {"q": "Cách đặt vấn đề có đang giới hạn lựa chọn của bạn không?", "answer_hint": "Anchor"},
+    ],
+    BlindspotType.OVERGENERALIZATION: [
+        {"q": "'{entity}' — có bao nhiêu counter-example?", "answer_hint": "Phản ví dụ"},
+        {"q": "Từ mẫu này suy ra tổng thể — mẫu có đại diện không?", "answer_hint": "Representativeness"},
+        {"q": "Nếu chỉ đúng 60% thời gian, '{entity}' còn hữu ích không?", "answer_hint": "Confidence interval"},
+    ],
+    BlindspotType.TEMPORAL_CONFOUND: [
+        {"q": "'{entity}' thay đổi theo thời gian — bạn đo ở thời điểm nào?", "answer_hint": "Time series"},
+        {"q": "Có yếu tố mùa vụ hoặc chu kỳ nào ảnh hưởng '{entity}' không?", "answer_hint": "Seasonality"},
+        {"q": "Nếu đo '{entity}' vào tuần sau, kết quả có khác không?", "answer_hint": "Temporal stability"},
+    ],
+    BlindspotType.SELECTION_BIAS: [
+        {"q": "Mẫu bạn dùng để kết luận về '{entity}' được chọn như thế nào?", "answer_hint": "Sampling method"},
+        {"q": "Ai bị loại khỏi mẫu? Điều đó làm sai lệch kết luận ra sao?", "answer_hint": "Exclusion criteria"},
+        {"q": "Nếu chọn mẫu ngẫu nhiên thực sự, '{entity}' còn đúng không?", "answer_hint": "Random sampling"},
+    ],
+}
+
+class QuizGenerator:
+    def __init__(self, pipeline: ExocortexPipeline):
+        self.pipeline = pipeline
+        self.quiz_log: List[dict] = []
+        self.last_quiz_time: Dict[int, float] = {}
+
+    def generate_quiz(self, n_questions: int = 3) -> List[dict]:
+        mastery = self.pipeline.user_model.state.mastery
+        weakest = np.argsort(mastery)[:n_questions]
+
+        questions = []
+        for idx in weakest:
+            domain_idx = int(idx)
+            bt = BlindspotType(domain_idx + 1)
+            templates = QUIZ_TEMPLATES[bt]
+            t = templates[domain_idx % len(templates)]
+            entity = self._recent_entity_for(bt) or "ý tưởng này"
+
+            questions.append({
+                "id": f"q-{int(time.time())}-{domain_idx}",
+                "domain": bt.name,
+                "domain_idx": domain_idx,
+                "question": t["q"].replace("{entity}", entity),
+                "hint": t["answer_hint"],
+                "mastery_current": round(float(mastery[domain_idx]), 2),
+            })
+
+        return questions
+
+    def submit_answer(self, quiz_id: str, domain_idx: int, score: float):
+        self.pipeline.user_model.update_mastery(domain_idx, score, 0.5)
+        self.pipeline.fading.update(self.pipeline.user_model)
+        self.quiz_log.append({"quiz_id": quiz_id, "domain_idx": domain_idx, "score": score, "time": time.time()})
+        self.last_quiz_time[domain_idx] = time.time()
+
+    def should_quiz(self, domain_idx: int) -> bool:
+        last = self.last_quiz_time.get(domain_idx, 0)
+        return (time.time() - last) > 86400 * 3
+
+    def _recent_entity_for(self, bt: BlindspotType) -> Optional[str]:
+        for prompt in reversed(self.pipeline.user_model.prompt_log):
+            if prompt.blindspot_target == bt and prompt.entities_used:
+                return prompt.entities_used[0]
+        return None
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# VIII. PROACTIVE NUDGE ENGINE
+# ═══════════════════════════════════════════════════════════════════════
+
+class NudgeEngine:
+    def __init__(self, pipeline: ExocortexPipeline):
+        self.pipeline = pipeline
+        self.last_nudge_time = 0.0
+        self.nudge_interval = 3600  # 1 hour between nudges
+
+    def get_nudge(self) -> Optional[dict]:
+        now = time.time()
+        if now - self.last_nudge_time < self.nudge_interval:
+            return None
+
+        mastery = self.pipeline.user_model.state.mastery
+        weakest_idx = int(np.argmin(mastery))
+
+        domain_names = [
+            "Thiếu biến kiểm soát", "Nhân quả ngược", "Bỏ qua tỉ lệ nền",
+            "Thiên kiến sống sót", "Bẫy khung", "Khái quát hóa quá mức",
+            "Yếu tố thời gian gây nhiễu", "Thiên kiến chọn mẫu"
+        ]
+
+        nudge_texts = [
+            f"🤔 Bạn có đang mắc {domain_names[weakest_idx].lower()} trong suy nghĩ hiện tại không?",
+            f"🧠 Dừng 3 giây: kiểm tra xem có {domain_names[weakest_idx].lower()} không?",
+            f"💡 Blindspot yếu nhất của bạn hôm nay: {domain_names[weakest_idx]}. Đang ở đâu?",
+        ]
+
+        self.last_nudge_time = now
+        return {
+            "domain": domain_names[weakest_idx],
+            "domain_idx": weakest_idx,
+            "mastery": round(float(mastery[weakest_idx]), 2),
+            "nudge": nudge_texts[weakest_idx % 3],
+        }
+
+    def daily_reflection(self) -> dict:
+        mastery = self.pipeline.user_model.state.mastery
+        domain_names = [
+            "Thiếu biến kiểm soát", "Nhân quả ngược", "Bỏ qua tỉ lệ nền",
+            "Thiên kiến sống sót", "Bẫy khung", "Khái quát hóa quá mức",
+            "Yếu tố thời gian gây nhiễu", "Thiên kiến chọn mẫu"
+        ]
+        ranked = sorted(enumerate(mastery), key=lambda x: x[1])
+        return {
+            "prompts_today": self.pipeline.user_model.state.total_prompts_today,
+            "fatigue": round(self.pipeline.user_model.state.fatigue, 2),
+            "weakest": [{"domain": domain_names[i], "mastery": round(float(m), 2)} for i, m in ranked[:3]],
+            "strongest": [{"domain": domain_names[i], "mastery": round(float(m), 2)} for i, m in ranked[-3:]],
+            "average_mastery": round(float(np.mean(mastery)), 3),
+            "message": self._reflection_message(ranked, domain_names),
+        }
+
+    def _reflection_message(self, ranked, names):
+        avg = float(np.mean(self.pipeline.user_model.state.mastery))
+        if avg < 0.3:
+            return "🌱 Đang ở giai đoạn nhận thức ban đầu. Mỗi blindspot phát hiện được là một chiến thắng."
+        elif avg < 0.6:
+            return f"📈 Đang tiến bộ. Điểm yếu nhất: {names[ranked[0][0]]}. Tập trung vào đó ngày mai."
+        else:
+            return f"🎯 Xuất sắc. Bạn gần như miễn dịch với {names[ranked[-1][0]]}. Tiếp tục duy trì."
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# IX. SELF-TEST SUITE
 # ═══════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
