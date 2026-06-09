@@ -15,11 +15,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import uvicorn
+import subprocess
 
 from core.exocortex_core import ExocortexPipeline
 
@@ -138,6 +139,77 @@ async def asr_detect(req: DetectRequest):
         pipeline.user_model.tick_second()
 
     return await detect(DetectRequest(text=text))
+
+@app.post("/process-voice")
+async def process_voice(file: UploadFile = File(...)):
+    """
+    Accept audio upload (OGG from Telegram, WAV, MP3) from Telegram bot.
+    Runs ASR + blindspot detection + Socratic generation.
+    Returns full pipeline result.
+    """
+    audio_bytes = await file.read()
+    if len(audio_bytes) < 500:
+        raise HTTPException(400, "Audio too short")
+
+    text = await transcribe_audio_bytes(audio_bytes, file.filename or "audio.ogg")
+
+    if not text:
+        return {"transcript": "", "blindspots": [], "prompt": None,
+                "message": "Không nghe rõ, thử lại nhé?"}
+
+    pipeline.user_model.tick_second()
+    signals = pipeline.detector.detect(text)
+    prompt = pipeline.generator.generate(signals, pipeline.user_model.state)
+    pipeline.fading.update(pipeline.user_model)
+
+    fade_level = pipeline.fading.get_fade_level(
+        float(np.mean(pipeline.user_model.state.fading))
+    )
+
+    return DetectResponse(
+        blindspots=[BlindspotResult(
+            type=s.blindspot_type.name,
+            severity=round(s.severity, 3),
+            context=s.context
+        ) for s in signals],
+        vector=[round(v, 3) for v in pipeline.detector.blindspot_vector(text).tolist()],
+        prompt=prompt.text if prompt else None,
+        prompt_complexity=round(prompt.complexity, 3) if prompt else None,
+        prompt_spoil=round(prompt.spoil_level, 3) if prompt else None,
+        fade_level=fade_level.name,
+        fatigue=round(pipeline.user_model.state.fatigue, 3),
+        mastery=[round(m, 3) for m in pipeline.user_model.state.mastery.tolist()]
+    )
+
+
+async def transcribe_audio_bytes(audio_bytes: bytes, filename: str) -> str:
+    """Transcribe audio bytes (any format ffmpeg can decode) to text."""
+    if not whisper_model:
+        return ""
+
+    try:
+        # Convert to 16kHz mono PCM using ffmpeg
+        proc = subprocess.run(
+            ["ffmpeg", "-i", "pipe:0", "-ar", "16000", "-ac", "1",
+             "-f", "s16le", "-acodec", "pcm_s16le", "pipe:1"],
+            input=audio_bytes, capture_output=True, timeout=15
+        )
+        if proc.returncode != 0:
+            return ""
+
+        pcm = proc.stdout
+        audio_np = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+
+        if len(audio_np) < 1600:
+            return ""
+
+        segments, _ = whisper_model.transcribe(audio_np, language="vi",
+                                                beam_size=1, vad_filter=True)
+        text = " ".join(s.text.strip() for s in segments if s.text.strip())
+        return text
+    except Exception:
+        return ""
+
 
 # ═══════════════════════════════════════════════════════════════════════
 # WEBSOCKET — Real-time Audio Streaming
