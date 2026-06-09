@@ -2,376 +2,570 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0f0f1a">
+<meta name="theme-color" content="#06060f">
+<meta name="description" content="EXOCORTEX — Symbiotic AI. Bán cầu não thứ ba.">
 <title>EXOCORTEX</title>
-<link rel="manifest" href="data:application/json,{}">
+<link rel="manifest" href="/manifest.json">
 <style>
   :root {
-    --bg: #0f0f1a;
-    --surface: #1a1a2e;
-    --border: #2a2a4a;
-    --text: #e8e8f0;
-    --muted: #8888aa;
-    --accent: #6c5ce7;
-    --accent-glow: #a29bfe;
-    --success: #00cec9;
-    --warn: #fdcb6e;
-    --danger: #ff7675;
-    --radius: 16px;
+    --bg: #06060f;
+    --surface: #0e0e1e;
+    --surface2: #16162a;
+    --border: #1e1e3a;
+    --text: #e4e4f0;
+    --muted: #6a6a8a;
+    --accent: #7c5ce7;
+    --accent-glow: #a78bfa;
+    --success: #06d6a0;
+    --warn: #ffd166;
+    --danger: #ef476f;
+    --radius: 18px;
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-family: var(--font);
     background: var(--bg);
     color: var(--text);
-    min-height: 100dvh;
+    min-height: 100dvh; min-height: -webkit-fill-available;
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
+    -webkit-user-select: none;
+    position: relative;
   }
 
-  /* Header */
+  /* ── Cosmic background ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 30%, rgba(124,92,231,0.06) 0%, transparent 70%),
+                radial-gradient(ellipse 40% 50% at 80% 80%, rgba(6,214,160,0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Header ── */
   header {
-    padding: 20px 20px 0;
+    padding: 16px 20px 0;
     text-align: center;
     position: relative;
     z-index: 2;
   }
   header h1 {
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: -0.5px;
-    background: linear-gradient(135deg, var(--accent-glow), var(--success));
+    background: linear-gradient(135deg, var(--accent-glow) 0%, #c4b5fd 40%, var(--success) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
-  header .subtitle {
-    font-size: 0.8rem;
+  header .tagline {
+    font-size: 0.72rem;
     color: var(--muted);
     margin-top: 2px;
+    letter-spacing: 0.5px;
   }
 
-  /* Status Bar */
-  #status-bar {
+  /* ── Mode selector ── */
+  #mode-bar {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    padding: 12px 20px 8px;
+    z-index: 2;
+  }
+  .mode-chip {
+    font-size: 0.68rem;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.25s;
+    font-family: var(--font);
+  }
+  .mode-chip.active {
+    border-color: var(--accent);
+    color: var(--accent-glow);
+    background: rgba(124,92,231,0.12);
+  }
+
+  /* ── Status line ── */
+  #status-line {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 10px 20px;
-    font-size: 0.8rem;
+    padding: 4px 20px 12px;
+    font-size: 0.72rem;
     color: var(--muted);
+    z-index: 2;
   }
   #status-dot {
-    width: 8px; height: 8px;
+    width: 7px; height: 7px;
     border-radius: 50%;
     background: var(--muted);
-    transition: background 0.3s;
+    transition: all 0.3s;
+    flex-shrink: 0;
   }
-  #status-dot.connected { background: var(--success); box-shadow: 0 0 8px var(--success); }
-  #status-dot.listening { background: var(--accent-glow); animation: pulse 1.5s infinite; }
-  #status-dot.processing { background: var(--warn); animation: pulse 0.5s infinite; }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
+  #status-dot.connected { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  #status-dot.listening { background: var(--accent-glow); animation: pulse-dot 1.2s infinite; }
+  #status-dot.processing { background: var(--warn); animation: pulse-dot 0.4s infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
-  /* Prompt Card */
-  #prompt-area {
+  /* ── Main content ── */
+  #main-area {
     flex: 1;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    padding: 0 16px;
+    z-index: 2;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Transcript log ── */
+  #transcript-log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 60px;
+    max-height: 35vh;
+  }
+  .log-entry {
+    font-size: 0.78rem;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--muted);
+    line-height: 1.4;
+    animation: fadeIn 0.3s;
+  }
+  .log-entry.you { align-self: flex-end; background: var(--surface2); color: var(--text); }
+  .log-entry.blindspot { border-left: 2px solid var(--warn); }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: translateY(0); } }
+
+  /* ── Prompt card ── */
+  #prompt-container {
+    padding: 10px 0;
+    display: flex;
     justify-content: center;
-    padding: 20px;
+    min-height: 100px;
   }
   #prompt-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 28px 24px;
-    max-width: 360px;
+    padding: 24px 20px;
     width: 100%;
+    max-width: 380px;
     text-align: center;
-    transition: transform 0.3s, box-shadow 0.3s, opacity 0.3s;
-    opacity: 0.6;
+    transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    opacity: 0.5;
+    transform: scale(0.97);
   }
   #prompt-card.active {
     opacity: 1;
+    transform: scale(1);
     border-color: var(--accent);
-    box-shadow: 0 0 40px rgba(108,92,231,0.2);
-    transform: scale(1.02);
+    box-shadow: 0 0 50px rgba(124,92,231,0.25), 0 0 100px rgba(124,92,231,0.08);
   }
   #prompt-card .label {
-    font-size: 0.7rem;
+    font-size: 0.62rem;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 2.5px;
     color: var(--accent-glow);
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+    font-weight: 600;
   }
   #prompt-card .question {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
     font-weight: 500;
-    line-height: 1.5;
+    line-height: 1.55;
     color: var(--text);
+    letter-spacing: -0.2px;
   }
-  #prompt-card .meta {
-    font-size: 0.7rem;
-    color: var(--muted);
-    margin-top: 16px;
-  }
-  #prompt-card .empty {
+  #prompt-card .question.empty {
     color: var(--muted);
     font-style: italic;
-    font-size: 1rem;
+    font-size: 0.9rem;
+    font-weight: 400;
+  }
+  #prompt-card .sub {
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 14px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  #prompt-card .sub span {
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--surface2);
   }
 
-  /* Blindspots */
-  #blindspots {
-    padding: 0 20px 10px;
+  /* ── Blindspot radar ── */
+  #radar {
     display: flex;
+    gap: 5px;
     flex-wrap: wrap;
-    gap: 6px;
     justify-content: center;
+    padding: 6px 0 12px;
+    min-height: 28px;
   }
-  .bs-tag {
-    font-size: 0.65rem;
-    padding: 4px 10px;
-    border-radius: 20px;
+  .bs-badge {
+    font-size: 0.62rem;
+    padding: 3px 9px;
+    border-radius: 12px;
     background: var(--surface);
     border: 1px solid var(--border);
     color: var(--muted);
-    transition: all 0.3s;
+    transition: all 0.4s;
   }
-  .bs-tag.detected {
+  .bs-badge.hit {
     border-color: var(--warn);
     color: var(--warn);
-    background: rgba(253,203,110,0.1);
+    background: rgba(255,209,102,0.1);
+    animation: badgePop 0.4s cubic-bezier(0.34,1.56,0.64,1);
   }
+  @keyframes badgePop { from { transform:scale(0.8); } to { transform:scale(1); } }
 
-  /* Controls */
+  /* ── Controls ── */
   #controls {
-    padding: 16px 20px 30px;
+    padding: 8px 0 20px;
     display: flex;
     justify-content: center;
+    align-items: center;
+    gap: 20px;
+    z-index: 2;
   }
   #mic-btn {
-    width: 72px; height: 72px;
+    width: 68px; height: 68px;
     border-radius: 50%;
     border: 2px solid var(--border);
     background: var(--surface);
     color: var(--text);
-    font-size: 2rem;
+    font-size: 1.8rem;
     cursor: pointer;
     transition: all 0.3s;
     display: flex;
     align-items: center;
     justify-content: center;
-    -webkit-tap-highlight-color: transparent;
+    position: relative;
   }
-  #mic-btn:active {
-    transform: scale(0.9);
+  #mic-btn::after {
+    content: '';
+    position: absolute; inset: -6px;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    transition: all 0.3s;
   }
   #mic-btn.recording {
     border-color: var(--danger);
-    background: rgba(255,118,117,0.1);
-    box-shadow: 0 0 30px rgba(255,118,117,0.3);
-    animation: pulse-rec 2s infinite;
+    background: rgba(239,71,111,0.12);
   }
-  @keyframes pulse-rec {
-    0%, 100% { box-shadow: 0 0 20px rgba(255,118,117,0.2); }
-    50% { box-shadow: 0 0 50px rgba(255,118,117,0.5); }
+  #mic-btn.recording::after {
+    border-color: rgba(239,71,111,0.3);
+    animation: ring-pulse 2s infinite;
+  }
+  @keyframes ring-pulse {
+    0%,100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.18); opacity: 0; }
   }
 
-  /* Text Input */
-  #text-input-area {
-    padding: 0 20px 16px;
+  #mic-btn.continuous-active {
+    border-color: var(--accent);
+    background: rgba(124,92,231,0.12);
+  }
+  #mic-btn.continuous-active::after {
+    border-color: rgba(124,92,231,0.3);
+    animation: ring-pulse 3s infinite;
+  }
+
+  /* ── Waveform ── */
+  #waveform {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 2px;
+    height: 28px;
+    padding: 0 0 6px;
+  }
+  #waveform .bar {
+    width: 3px;
+    background: var(--muted);
+    border-radius: 2px;
+    transition: height 0.08s ease-out;
+  }
+  #waveform.active .bar { background: var(--accent-glow); }
+
+  /* ── Text input ── */
+  #text-bar {
+    padding: 0 16px 12px;
     display: flex;
     gap: 8px;
+    z-index: 2;
   }
   #text-input {
     flex: 1;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 10px 18px;
+    border-radius: 22px;
+    padding: 10px 16px;
     color: var(--text);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    font-family: var(--font);
     outline: none;
+    transition: border-color 0.2s;
   }
-  #text-input:focus {
-    border-color: var(--accent);
-  }
+  #text-input:focus { border-color: var(--accent); }
   #send-btn {
     background: var(--accent);
     border: none;
     color: white;
     border-radius: 50%;
-    width: 42px; height: 42px;
-    font-size: 1.2rem;
+    width: 40px; height: 40px;
+    font-size: 1rem;
     cursor: pointer;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
   }
+  #send-btn:active { transform: scale(0.9); }
 
-  /* Log */
-  #log {
-    padding: 0 20px 20px;
-    font-size: 0.7rem;
-    color: var(--muted);
-    max-height: 80px;
-    overflow-y: auto;
-    text-align: center;
-  }
+  /* ── Empty state ── */
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🧠 EXOCORTEX</h1>
-  <div class="subtitle">Symbiotic AI — Vỏ não ngoại vi</div>
+  <h1>EXOCORTEX</h1>
+  <div class="tagline">Bán cầu não thứ ba</div>
 </header>
 
-<div id="status-bar">
+<div id="mode-bar">
+  <button class="mode-chip active" data-mode="push">🎙 Nhấn-để-nói</button>
+  <button class="mode-chip" data-mode="continuous">🔄 Liên tục</button>
+</div>
+
+<div id="status-line">
   <div id="status-dot"></div>
-  <span id="status-text">Sẵn sàng</span>
+  <span id="status-text">Đang khởi động...</span>
 </div>
 
-<div id="prompt-area">
-  <div id="prompt-card">
-    <div class="label">CÂU HỎI SOCRATIC</div>
-    <div class="question empty">Nhấn 🎤 để bắt đầu hội thoại.<br>AI sẽ hỏi bạn câu hỏi — không đưa câu trả lời.</div>
-    <div class="meta"></div>
+<div id="waveform"><span style="font-size:0.6rem;color:var(--muted)">...</span></div>
+
+<div id="main-area">
+  <div id="transcript-log"></div>
+  <div id="prompt-container">
+    <div id="prompt-card">
+      <div class="label">TRUY VẤN SOCRATIC</div>
+      <div class="question empty">
+        Đeo tai nghe, để điện thoại gần bạn.<br>
+        Nhấn 🎤 khi hội thoại — AI sẽ hỏi bạn câu hỏi phản biện.
+      </div>
+      <div class="sub"></div>
+    </div>
   </div>
+  <div id="radar"></div>
 </div>
-
-<div id="blindspots"></div>
 
 <div id="controls">
   <button id="mic-btn" title="Bắt đầu / Dừng">🎤</button>
 </div>
 
-<div id="text-input-area">
-  <input type="text" id="text-input" placeholder="Hoặc nhập văn bản để phân tích..." autocomplete="off">
+<div id="text-bar">
+  <input type="text" id="text-input" placeholder="Hoặc gõ suy nghĩ của bạn..." autocomplete="off" enterkeyhint="send">
   <button id="send-btn">▶</button>
 </div>
 
-<div id="log"></div>
-
 <script>
 // ═══════════════════════════════════════════════════════════════════════
-// EXOCORTEX — Android PWA Client
+// EXOCORTEX — Symbiotic AI Wearable
+// The Third Hemisphere. Listens. Detects blindspots. Asks Socratic questions.
+// Never answers. Only sharpens your thinking.
 // ═══════════════════════════════════════════════════════════════════════
 
-const SERVER_HOST = window.location.hostname;
-const WS_URL = `wss://${SERVER_HOST}/exocortex/ws`;
+const HOST = window.location.hostname;
+const WS_URL = `wss://${HOST}/exocortex/ws`;
 const REST_URL = `/exocortex/detect`;
 
-// State
+// ── State ──
 let ws = null;
-let mediaRecorder = null;
-let audioStream = null;
+let mode = 'push';          // 'push' | 'continuous'
 let isRecording = false;
-let audioChunks = [];
-let lastPrompt = null;
+let mediaRecorder = null;
+let audioCtx = null;
+let analyser = null;
+let animationId = null;
+let transcript = [];
+let currentBlindspots = [];
 
-// DOM
-const statusDot = document.getElementById('status-dot');
-const statusText = document.getElementById('status-text');
-const promptCard = document.getElementById('prompt-card');
-const questionEl = promptCard.querySelector('.question');
-const metaEl = promptCard.querySelector('.meta');
-const blindspotsEl = document.getElementById('blindspots');
-const micBtn = document.getElementById('mic-btn');
-const textInput = document.getElementById('text-input');
-const sendBtn = document.getElementById('send-btn');
-const logEl = document.getElementById('log');
+// ── DOM ──
+const $ = (s) => document.querySelector(s);
+const statusDot = $('#status-dot');
+const statusText = $('#status-text');
+const promptCard = $('#prompt-card');
+const questionEl = $('#prompt-card .question');
+const subEl = $('#prompt-card .sub');
+const radarEl = $('#radar');
+const micBtn = $('#mic-btn');
+const textInput = $('#text-input');
+const sendBtn = $('#send-btn');
+const transcriptLog = $('#transcript-log');
+const waveformEl = $('#waveform');
+const modeChips = document.querySelectorAll('.mode-chip');
+
+// ── Build waveform bars ──
+for (let i = 0; i < 24; i++) {
+  const bar = document.createElement('div');
+  bar.className = 'bar';
+  bar.style.height = '4px';
+  waveformEl.appendChild(bar);
+}
+
+// ── Audio context for waveform visualization ──
+function initAudioContext(stream) {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 64;
+  const source = audioCtx.createMediaStreamSource(stream);
+  source.connect(analyser);
+}
+
+function animateWaveform() {
+  if (!analyser) return;
+  const bars = waveformEl.querySelectorAll('.bar');
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(data);
+  for (let i = 0; i < bars.length; i++) {
+    const val = data[Math.floor(i * data.length / bars.length)] / 255;
+    bars[i].style.height = (2 + val * 24) + 'px';
+  }
+  if (isRecording) {
+    animationId = requestAnimationFrame(animateWaveform);
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 // WebSocket
 // ═══════════════════════════════════════════════════════════════════════
 
-function connectWebSocket() {
+function connectWS() {
   if (ws && ws.readyState === WebSocket.OPEN) return;
+  if (ws && ws.readyState === WebSocket.CONNECTING) return;
 
-  log('🔌 Kết nối...');
   ws = new WebSocket(WS_URL);
 
   ws.onopen = () => {
-    log('✅ Đã kết nối');
-    statusDot.className = 'connected';
-    statusText.textContent = 'Đã kết nối';
+    setStatus('connected', 'Sẵn sàng');
   };
 
-  ws.onmessage = (event) => {
-    try {
-      const msg = JSON.parse(event.data);
-      handleMessage(msg);
-    } catch (e) {
-      log('📝 ' + event.data);
-    }
+  ws.onmessage = (ev) => {
+    try { handleMessage(JSON.parse(ev.data)); }
+    catch { /* ignore malformed */ }
   };
 
   ws.onclose = () => {
-    log('🔌 Mất kết nối');
-    statusDot.className = '';
-    statusText.textContent = 'Mất kết nối';
-    setTimeout(connectWebSocket, 2000);
+    setStatus('', 'Mất kết nối — tự reconnect...');
+    setTimeout(connectWS, 1500);
   };
 
-  ws.onerror = () => {
-    log('⚠️ Lỗi kết nối');
-  };
+  ws.onerror = () => {};
 }
 
 function handleMessage(msg) {
   switch (msg.type) {
     case 'prompt':
       showPrompt(msg);
-      break;
-    case 'silence':
-      statusDot.className = isRecording ? 'listening' : 'connected';
-      statusText.textContent = msg.fade_level ? `Im lặng (${msg.fade_level})` : 'Đang nghe...';
+      speakPrompt(msg.text);
       break;
     case 'partial_transcript':
-      statusText.textContent = 'Đã nghe: ' + msg.text.slice(-40);
+      addTranscript('you', msg.text);
+      setStatus('listening', 'Đang nghe...');
+      break;
+    case 'silence':
+      if (isRecording) setStatus('listening', 'Yên lặng...');
       break;
   }
 }
+
+function setStatus(cls, text) {
+  statusDot.className = cls;
+  statusText.textContent = text;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Prompt display
+// ═══════════════════════════════════════════════════════════════════════
 
 function showPrompt(msg) {
   promptCard.classList.add('active');
   questionEl.textContent = msg.text;
   questionEl.className = 'question';
-  metaEl.textContent = `Độ phức tạp: ${msg.complexity} · Blindspot: ${msg.target}`;
-  statusDot.className = 'connected';
-  statusText.textContent = 'Câu hỏi mới';
-  lastPrompt = msg;
+  subEl.innerHTML = msg.blindspots
+    ? msg.blindspots.slice(0,2).map(b => `<span>${b.type}</span>`).join('')
+    : '';
+  setStatus('connected', 'Câu hỏi mới');
 
-  // Show blindspot tags
+  // Radar badges
   if (msg.blindspots) {
-    blindspotsEl.innerHTML = msg.blindspots.map(b =>
-      `<span class="bs-tag detected">${b.type} (${b.severity})</span>`
+    currentBlindspots = msg.blindspots;
+    radarEl.innerHTML = msg.blindspots.map(b =>
+      `<span class="bs-badge hit">${b.type}</span>`
     ).join('');
     setTimeout(() => {
-      blindspotsEl.querySelectorAll('.bs-tag').forEach(t => t.classList.remove('detected'));
-    }, 5000);
+      radarEl.querySelectorAll('.bs-badge').forEach(b => b.classList.remove('hit'));
+    }, 6000);
   }
 
-  // Vibrate on prompt
-  if (navigator.vibrate) {
-    navigator.vibrate([50, 100, 50]);
-  }
+  // Haptic feedback
+  if (navigator.vibrate) navigator.vibrate([30, 80, 30]);
 
-  // Auto-dismiss card glow
-  setTimeout(() => promptCard.classList.remove('active'), 8000);
+  setTimeout(() => promptCard.classList.remove('active'), 10000);
 }
 
-function log(text) {
-  logEl.textContent = text;
+function speakPrompt(text) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'vi-VN';
+  u.rate = 0.95;
+  u.pitch = 1.05;
+  window.speechSynthesis.speak(u);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Transcript
+// ═══════════════════════════════════════════════════════════════════════
+
+function addTranscript(cls, text) {
+  transcript.push({ cls, text });
+  const div = document.createElement('div');
+  div.className = `log-entry ${cls}`;
+  div.textContent = text;
+  transcriptLog.appendChild(div);
+  transcriptLog.scrollTop = transcriptLog.scrollHeight;
+  if (transcriptLog.children.length > 30) {
+    transcriptLog.firstChild.remove();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -380,9 +574,8 @@ function log(text) {
 
 async function startRecording() {
   if (isRecording) return;
-
   try {
-    audioStream = await navigator.mediaDevices.getUserMedia({
+    const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         sampleRate: 16000,
         channelCount: 1,
@@ -391,8 +584,11 @@ async function startRecording() {
       }
     });
 
-    mediaRecorder = new MediaRecorder(audioStream, {
-      mimeType: 'audio/webm;codecs=opus'
+    initAudioContext(stream);
+
+    mediaRecorder = new MediaRecorder(stream, {
+      mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus' : 'audio/webm'
     });
 
     mediaRecorder.ondataavailable = (e) => {
@@ -401,16 +597,22 @@ async function startRecording() {
       }
     };
 
-    mediaRecorder.start(250); // send chunk every 250ms
+    mediaRecorder.start(200);
     isRecording = true;
-    micBtn.textContent = '⏹';
-    micBtn.classList.add('recording');
-    statusDot.className = 'listening';
-    statusText.textContent = 'Đang nghe...';
-    log('🎤 Đang ghi âm');
+    waveformEl.classList.add('active');
+    animationId = requestAnimationFrame(animateWaveform);
+
+    if (mode === 'push') {
+      micBtn.textContent = '⏹';
+      micBtn.className = 'recording';
+    } else {
+      micBtn.textContent = '⏸';
+      micBtn.className = 'continuous-active';
+    }
+    setStatus('listening', 'Đang nghe...');
   } catch (err) {
-    log('❌ Lỗi mic: ' + err.message);
-    alert('Không thể truy cập microphone. Hãy dùng Chrome hoặc cho phép quyền mic.');
+    setStatus('', 'Lỗi mic: ' + err.message);
+    alert('Cần quyền microphone. Vào Cài đặt → Chrome → Microphone → Bật.');
   }
 }
 
@@ -420,43 +622,43 @@ function stopRecording() {
   if (mediaRecorder && mediaRecorder.state !== 'inactive') {
     mediaRecorder.stop();
   }
-  if (audioStream) {
-    audioStream.getTracks().forEach(t => t.stop());
+  if (mediaRecorder && mediaRecorder.stream) {
+    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+  }
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
   }
 
-  // Signal turn end
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: 'turn_end' }));
   }
 
   isRecording = false;
   micBtn.textContent = '🎤';
-  micBtn.classList.remove('recording');
-  statusDot.className = 'processing';
-  statusText.textContent = 'Đang xử lý...';
-  log('⏸ Đã dừng ghi âm, đang phân tích...');
+  micBtn.className = '';
+  waveformEl.classList.remove('active');
+  setStatus('processing', 'Đang phân tích...');
+
+  // Reset waveform bars
+  waveformEl.querySelectorAll('.bar').forEach(b => b.style.height = '3px');
 }
 
 function toggleRecording() {
-  if (isRecording) {
-    stopRecording();
-  } else {
-    startRecording();
-  }
+  if (isRecording) { stopRecording(); }
+  else { startRecording(); }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// Text Input
+// Text input
 // ═══════════════════════════════════════════════════════════════════════
 
 async function sendText() {
   const text = textInput.value.trim();
-  if (!text) return;
-
+  if (text.length < 8) return;
   textInput.value = '';
-  log('📤 Đang phân tích...');
-  statusDot.className = 'processing';
-  statusText.textContent = 'Đang phân tích...';
+  addTranscript('you', text);
+  setStatus('processing', 'Đang phân tích...');
 
   try {
     const resp = await fetch(REST_URL, {
@@ -464,28 +666,36 @@ async function sendText() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text })
     });
-    const data = await resp.json();
-
-    if (data.prompt) {
+    const d = await resp.json();
+    if (d.prompt) {
       showPrompt({
-        text: data.prompt,
-        complexity: data.prompt_complexity,
-        target: data.blindspots[0]?.type || 'unknown',
-        blindspots: data.blindspots
+        text: d.prompt,
+        complexity: d.prompt_complexity,
+        blindspots: d.blindspots
       });
     } else {
-      questionEl.textContent = 'Không phát hiện blindspot. Tiếp tục hội thoại.';
+      questionEl.textContent = '✅ Không phát hiện blindspot.';
       questionEl.className = 'empty';
-      metaEl.textContent = `Fade: ${data.fade_level} · Mastery: ${data.mastery[0].toFixed(2)}`;
+      subEl.innerHTML = '';
     }
-    statusDot.className = 'connected';
-    statusText.textContent = 'Sẵn sàng';
-  } catch (err) {
-    log('❌ Lỗi: ' + err.message);
-    statusDot.className = '';
-    statusText.textContent = 'Lỗi';
+    setStatus('connected', 'Sẵn sàng');
+  } catch (e) {
+    setStatus('', 'Lỗi kết nối');
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// Mode switching
+// ═══════════════════════════════════════════════════════════════════════
+
+modeChips.forEach(chip => {
+  chip.addEventListener('click', () => {
+    if (isRecording) stopRecording();
+    mode = chip.dataset.mode;
+    modeChips.forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+  });
+});
 
 // ═══════════════════════════════════════════════════════════════════════
 // Events
@@ -497,17 +707,16 @@ textInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') sendText();
 });
 
-// Connect on load
-connectWebSocket();
-
-// Reconnect WebSocket periodically
+// Init
+connectWS();
 setInterval(() => {
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    connectWebSocket();
-  }
-}, 10000);
+  if (!ws || ws.readyState > WebSocket.OPEN) connectWS();
+}, 8000);
 
-log('🧠 EXOCORTEX sẵn sàng — Nhấn 🎤 để bắt đầu');
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>
