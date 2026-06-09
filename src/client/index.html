@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f0f1a">
+<title>EXOCORTEX</title>
+<link rel="manifest" href="data:application/json,{}">
+<style>
+  :root {
+    --bg: #0f0f1a;
+    --surface: #1a1a2e;
+    --border: #2a2a4a;
+    --text: #e8e8f0;
+    --muted: #8888aa;
+    --accent: #6c5ce7;
+    --accent-glow: #a29bfe;
+    --success: #00cec9;
+    --warn: #fdcb6e;
+    --danger: #ff7675;
+    --radius: 16px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  /* Header */
+  header {
+    padding: 20px 20px 0;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+  }
+  header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--accent-glow), var(--success));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  header .subtitle {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Status Bar */
+  #status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  #status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.3s;
+  }
+  #status-dot.connected { background: var(--success); box-shadow: 0 0 8px var(--success); }
+  #status-dot.listening { background: var(--accent-glow); animation: pulse 1.5s infinite; }
+  #status-dot.processing { background: var(--warn); animation: pulse 0.5s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Prompt Card */
+  #prompt-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #prompt-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+    transition: transform 0.3s, box-shadow 0.3s, opacity 0.3s;
+    opacity: 0.6;
+  }
+  #prompt-card.active {
+    opacity: 1;
+    border-color: var(--accent);
+    box-shadow: 0 0 40px rgba(108,92,231,0.2);
+    transform: scale(1.02);
+  }
+  #prompt-card .label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--accent-glow);
+    margin-bottom: 12px;
+  }
+  #prompt-card .question {
+    font-size: 1.2rem;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  #prompt-card .meta {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 16px;
+  }
+  #prompt-card .empty {
+    color: var(--muted);
+    font-style: italic;
+    font-size: 1rem;
+  }
+
+  /* Blindspots */
+  #blindspots {
+    padding: 0 20px 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+  .bs-tag {
+    font-size: 0.65rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    transition: all 0.3s;
+  }
+  .bs-tag.detected {
+    border-color: var(--warn);
+    color: var(--warn);
+    background: rgba(253,203,110,0.1);
+  }
+
+  /* Controls */
+  #controls {
+    padding: 16px 20px 30px;
+    display: flex;
+    justify-content: center;
+  }
+  #mic-btn {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 2rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #mic-btn:active {
+    transform: scale(0.9);
+  }
+  #mic-btn.recording {
+    border-color: var(--danger);
+    background: rgba(255,118,117,0.1);
+    box-shadow: 0 0 30px rgba(255,118,117,0.3);
+    animation: pulse-rec 2s infinite;
+  }
+  @keyframes pulse-rec {
+    0%, 100% { box-shadow: 0 0 20px rgba(255,118,117,0.2); }
+    50% { box-shadow: 0 0 50px rgba(255,118,117,0.5); }
+  }
+
+  /* Text Input */
+  #text-input-area {
+    padding: 0 20px 16px;
+    display: flex;
+    gap: 8px;
+  }
+  #text-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 10px 18px;
+    color: var(--text);
+    font-size: 0.9rem;
+    outline: none;
+  }
+  #text-input:focus {
+    border-color: var(--accent);
+  }
+  #send-btn {
+    background: var(--accent);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 42px; height: 42px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* Log */
+  #log {
+    padding: 0 20px 20px;
+    font-size: 0.7rem;
+    color: var(--muted);
+    max-height: 80px;
+    overflow-y: auto;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧠 EXOCORTEX</h1>
+  <div class="subtitle">Symbiotic AI — Vỏ não ngoại vi</div>
+</header>
+
+<div id="status-bar">
+  <div id="status-dot"></div>
+  <span id="status-text">Sẵn sàng</span>
+</div>
+
+<div id="prompt-area">
+  <div id="prompt-card">
+    <div class="label">CÂU HỎI SOCRATIC</div>
+    <div class="question empty">Nhấn 🎤 để bắt đầu hội thoại.<br>AI sẽ hỏi bạn câu hỏi — không đưa câu trả lời.</div>
+    <div class="meta"></div>
+  </div>
+</div>
+
+<div id="blindspots"></div>
+
+<div id="controls">
+  <button id="mic-btn" title="Bắt đầu / Dừng">🎤</button>
+</div>
+
+<div id="text-input-area">
+  <input type="text" id="text-input" placeholder="Hoặc nhập văn bản để phân tích..." autocomplete="off">
+  <button id="send-btn">▶</button>
+</div>
+
+<div id="log"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// EXOCORTEX — Android PWA Client
+// ═══════════════════════════════════════════════════════════════════════
+
+const SERVER_HOST = window.location.hostname;
+const WS_URL = `wss://${SERVER_HOST}/exocortex/ws`;
+const REST_URL = `/exocortex/detect`;
+
+// State
+let ws = null;
+let mediaRecorder = null;
+let audioStream = null;
+let isRecording = false;
+let audioChunks = [];
+let lastPrompt = null;
+
+// DOM
+const statusDot = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+const promptCard = document.getElementById('prompt-card');
+const questionEl = promptCard.querySelector('.question');
+const metaEl = promptCard.querySelector('.meta');
+const blindspotsEl = document.getElementById('blindspots');
+const micBtn = document.getElementById('mic-btn');
+const textInput = document.getElementById('text-input');
+const sendBtn = document.getElementById('send-btn');
+const logEl = document.getElementById('log');
+
+// ═══════════════════════════════════════════════════════════════════════
+// WebSocket
+// ═══════════════════════════════════════════════════════════════════════
+
+function connectWebSocket() {
+  if (ws && ws.readyState === WebSocket.OPEN) return;
+
+  log('🔌 Kết nối...');
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    log('✅ Đã kết nối');
+    statusDot.className = 'connected';
+    statusText.textContent = 'Đã kết nối';
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      handleMessage(msg);
+    } catch (e) {
+      log('📝 ' + event.data);
+    }
+  };
+
+  ws.onclose = () => {
+    log('🔌 Mất kết nối');
+    statusDot.className = '';
+    statusText.textContent = 'Mất kết nối';
+    setTimeout(connectWebSocket, 2000);
+  };
+
+  ws.onerror = () => {
+    log('⚠️ Lỗi kết nối');
+  };
+}
+
+function handleMessage(msg) {
+  switch (msg.type) {
+    case 'prompt':
+      showPrompt(msg);
+      break;
+    case 'silence':
+      statusDot.className = isRecording ? 'listening' : 'connected';
+      statusText.textContent = msg.fade_level ? `Im lặng (${msg.fade_level})` : 'Đang nghe...';
+      break;
+    case 'partial_transcript':
+      statusText.textContent = 'Đã nghe: ' + msg.text.slice(-40);
+      break;
+  }
+}
+
+function showPrompt(msg) {
+  promptCard.classList.add('active');
+  questionEl.textContent = msg.text;
+  questionEl.className = 'question';
+  metaEl.textContent = `Độ phức tạp: ${msg.complexity} · Blindspot: ${msg.target}`;
+  statusDot.className = 'connected';
+  statusText.textContent = 'Câu hỏi mới';
+  lastPrompt = msg;
+
+  // Show blindspot tags
+  if (msg.blindspots) {
+    blindspotsEl.innerHTML = msg.blindspots.map(b =>
+      `<span class="bs-tag detected">${b.type} (${b.severity})</span>`
+    ).join('');
+    setTimeout(() => {
+      blindspotsEl.querySelectorAll('.bs-tag').forEach(t => t.classList.remove('detected'));
+    }, 5000);
+  }
+
+  // Vibrate on prompt
+  if (navigator.vibrate) {
+    navigator.vibrate([50, 100, 50]);
+  }
+
+  // Auto-dismiss card glow
+  setTimeout(() => promptCard.classList.remove('active'), 8000);
+}
+
+function log(text) {
+  logEl.textContent = text;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Audio Recording
+// ═══════════════════════════════════════════════════════════════════════
+
+async function startRecording() {
+  if (isRecording) return;
+
+  try {
+    audioStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        sampleRate: 16000,
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true,
+      }
+    });
+
+    mediaRecorder = new MediaRecorder(audioStream, {
+      mimeType: 'audio/webm;codecs=opus'
+    });
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0 && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(e.data);
+      }
+    };
+
+    mediaRecorder.start(250); // send chunk every 250ms
+    isRecording = true;
+    micBtn.textContent = '⏹';
+    micBtn.classList.add('recording');
+    statusDot.className = 'listening';
+    statusText.textContent = 'Đang nghe...';
+    log('🎤 Đang ghi âm');
+  } catch (err) {
+    log('❌ Lỗi mic: ' + err.message);
+    alert('Không thể truy cập microphone. Hãy dùng Chrome hoặc cho phép quyền mic.');
+  }
+}
+
+function stopRecording() {
+  if (!isRecording) return;
+
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+  if (audioStream) {
+    audioStream.getTracks().forEach(t => t.stop());
+  }
+
+  // Signal turn end
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'turn_end' }));
+  }
+
+  isRecording = false;
+  micBtn.textContent = '🎤';
+  micBtn.classList.remove('recording');
+  statusDot.className = 'processing';
+  statusText.textContent = 'Đang xử lý...';
+  log('⏸ Đã dừng ghi âm, đang phân tích...');
+}
+
+function toggleRecording() {
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Text Input
+// ═══════════════════════════════════════════════════════════════════════
+
+async function sendText() {
+  const text = textInput.value.trim();
+  if (!text) return;
+
+  textInput.value = '';
+  log('📤 Đang phân tích...');
+  statusDot.className = 'processing';
+  statusText.textContent = 'Đang phân tích...';
+
+  try {
+    const resp = await fetch(REST_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const data = await resp.json();
+
+    if (data.prompt) {
+      showPrompt({
+        text: data.prompt,
+        complexity: data.prompt_complexity,
+        target: data.blindspots[0]?.type || 'unknown',
+        blindspots: data.blindspots
+      });
+    } else {
+      questionEl.textContent = 'Không phát hiện blindspot. Tiếp tục hội thoại.';
+      questionEl.className = 'empty';
+      metaEl.textContent = `Fade: ${data.fade_level} · Mastery: ${data.mastery[0].toFixed(2)}`;
+    }
+    statusDot.className = 'connected';
+    statusText.textContent = 'Sẵn sàng';
+  } catch (err) {
+    log('❌ Lỗi: ' + err.message);
+    statusDot.className = '';
+    statusText.textContent = 'Lỗi';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Events
+// ═══════════════════════════════════════════════════════════════════════
+
+micBtn.addEventListener('click', toggleRecording);
+sendBtn.addEventListener('click', sendText);
+textInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendText();
+});
+
+// Connect on load
+connectWebSocket();
+
+// Reconnect WebSocket periodically
+setInterval(() => {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    connectWebSocket();
+  }
+}, 10000);
+
+log('🧠 EXOCORTEX sẵn sàng — Nhấn 🎤 để bắt đầu');
+</script>
+</body>
+</html>
